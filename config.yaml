@@ -1,0 +1,27 @@
+yolo:
+  checkpoint : yolov6n #@param ["yolov6s", "yolov6n", "yolov6t"]
+  version : 0.4.0
+  weightsUrl : https://github.com/meituan/YOLOv6/releases/download/
+  device : cpu #@param ["gpu", "cpu"]
+  half : false #@param {type:"boolean"}
+  classes :
+    - person
+  desiredConfidence : 0.3
+
+  hide_labels: false #@param {type:"boolean"}
+  hide_conf: false #@param {type:"boolean"}
+
+  imgSize : [480, 640] #@param {type:"integer"}
+  conf_thres : 0.25 #@param {type:"number"}
+  iou_thres: 0.45 #@param {type:"number"}
+  max_det : 1000 #@param {type:"integer"}
+  agnostic_nms : false #@param {type:"boolean"}
+
+  imageUrl : https://scontent-fra3-2.xx.fbcdn.net/v/t1.6435-9/204439271_2310042749130399_8788169683234332481_n.jpg?_nc_cat=107&ccb=1-7&_nc_sid=8bfeb9&_nc_eui2=AeHccAngrkOQSmDcWYenBuWxmXj3xvk_ZgaZePfG-T9mBtkJdFfNw6s78MFep6O1lPzzVwUTbAX-InSSTvaa8nd8&_nc_ohc=MUXA-oaRKKwAX-8F9ZD&_nc_ht=scontent-fra3-2.xx&oh=00_AfDvSEAKV9IWpExKnzk-z6ht9sBfoJ1k28qesRW9lxnslg&oe=64CA985E
+  predictionImage : prediction.png
+
+  framesPerSecond : 1
+
+actions:
+  boxTolerance: 0.02
+  idleFrames: 5
