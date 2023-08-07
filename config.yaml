@@ -26,10 +26,13 @@ actions:
   boxTolerance: 0.02
   idleFrames: 5
 
+log:
+  maxLogSize: 100000000
+
 cameras:
   camera1: "http://localhost:5000/video"
 
 interfaceCamera:
-  dateTimeFormat: "%m-%d-%Y_%H:%M:%S"
+  dateTimeFormat: "%m-%d-%Y_%H:%M:%S.%f"
   imageFormat : ".png"
-  continuousRecording : 30
+  continuousRecording : 3600

@@ -19,6 +19,7 @@ class InterfaceCamera(BaseModule):
         self.__continuousRecording : str = self.getConfig()["interfaceCamera"]["continuousRecording"]
         self.__cameraImagesFolder : str = self.getPaths()["folders"]["imagesDatabase"]
         self.__processes : dict = dict()
+        self.__cameraProcess : multiprocessing.Process
         self.__terminateQueue : multiprocessing.Queue = multiprocessing.Queue()
 
     def __saveImage(self, frame : np.ndarray, camera : str):
@@ -33,7 +34,7 @@ class InterfaceCamera(BaseModule):
         )
 
         Image.fromarray(frame).save(imageName)
-    
+
     def __captureVideo(self, camera : str):
         """
         Method to get Images from Camera
@@ -43,10 +44,12 @@ class InterfaceCamera(BaseModule):
             ret , frame = capture.read()
 
             if ret:
-                self.__saveImage(frame, camera)
+                self.__saveImage(
+                    cv2.cvtColor(frame, cv2.COLOR_RGB2BGR),
+                    camera,
+                )
             else:
-                #TODO: error
-                pass
+                self.writeLog("Frame not available", "ERROR")
 
             if not self.__terminateQueue.empty():
                 if self.__terminateQueue.get() == "terminate":
@@ -66,6 +69,8 @@ class InterfaceCamera(BaseModule):
         index : int = 0
         firstCycleFinished : bool = False
         while(True):
+            if firstCycleFinished is False:
+                self.__processes[index].start()
             if index == len(self.__processes):
                 index = 0
                 firstCycleFinished = True
@@ -74,5 +79,22 @@ class InterfaceCamera(BaseModule):
                 self.__terminateQueue.put("terminate")
                 self.__processes[index].join()
                 self.__processes[index] = multiprocessing.Process(target=self.__captureVideo, args=[cameras[index]])
-            self.__processes[index].start()
+                self.__processes[index].start()
             index += 1
+
+            if not self.__terminateQueue.empty():
+                if self.__terminateQueue.get() == "terminate":
+                    break
+
+    def startCaptureVideos(self):
+        """
+        Method to capture videos from cameras in the background
+        """
+        self.__cameraProcess : multiprocessing.Process = multiprocessing.Process(target=self.captureVideos)
+        self.__cameraProcess.start()
+
+    def stopCaptureVideos(self):
+        """
+        Method to stop videos capture
+        """
+        self.__terminateQueue.put("terminate")
