@@ -25,3 +25,11 @@ yolo:
 actions:
   boxTolerance: 0.02
   idleFrames: 5
+
+cameras:
+  camera1: "http://localhost:5000/video"
+
+interfaceCamera:
+  dateTimeFormat: "%m-%d-%Y_%H:%M:%S"
+  imageFormat : ".png"
+  continuousRecording : 30
