@@ -6,6 +6,7 @@ import time
 from datetime import datetime
 from PIL import Image
 from modules.baseModule.baseModule import BaseModule
+from modules.interfaceDatabase.interfaceDatabase import InterfaceDatabase
 
 class InterfaceCamera(BaseModule):
     """
@@ -14,6 +15,7 @@ class InterfaceCamera(BaseModule):
     def __init__(self):
         super().__init__()
         self.__cameraConfig : dict = self.getConfig()["cameras"]
+        self.__interfaceCameraConfig : dict = self.getConfig()["interfaceCamera"]
         self.__dateTimeFormat : str = self.getConfig()["interfaceCamera"]["dateTimeFormat"]
         self.__imageFormat : str = self.getConfig()["interfaceCamera"]["imageFormat"]
         self.__continuousRecording : str = self.getConfig()["interfaceCamera"]["continuousRecording"]
@@ -21,6 +23,10 @@ class InterfaceCamera(BaseModule):
         self.__processes : dict = dict()
         self.__cameraProcess : multiprocessing.Process
         self.__terminateQueue : multiprocessing.Queue = multiprocessing.Queue()
+        self.__interfaceDatabase : InterfaceDatabase = InterfaceDatabase()
+
+    def __del__(self):
+        self.stopCaptureVideos()
 
     def __saveImage(self, frame : np.ndarray, camera : str):
         """
@@ -32,6 +38,8 @@ class InterfaceCamera(BaseModule):
             camera,
             datetime.now().strftime(self.__dateTimeFormat) + self.__imageFormat,
         )
+        
+        self.__interfaceDatabase.storeNewFrame(imageName)
 
         Image.fromarray(frame).save(imageName)
 
@@ -40,21 +48,25 @@ class InterfaceCamera(BaseModule):
         Method to get Images from Camera
         """
         capture : cv2.VideoCapture = cv2.VideoCapture(self.__cameraConfig[camera])
+        fps : int = capture.get(cv2.CAP_PROP_FPS)
+        frameIndexToCapture = int(fps / self.__interfaceCameraConfig["framesPerSecond"])
+
+        videoIndex : int = 0
         while(True):
             ret , frame = capture.read()
+            if videoIndex % frameIndexToCapture == 0:
+                if ret:
+                    self.__saveImage(
+                        cv2.cvtColor(frame, cv2.COLOR_RGB2BGR),
+                        camera,
+                    )
+                else:
+                    self.writeLog("Frame not available", "ERROR")
 
-            if ret:
-                self.__saveImage(
-                    cv2.cvtColor(frame, cv2.COLOR_RGB2BGR),
-                    camera,
-                )
-            else:
-                self.writeLog("Frame not available", "ERROR")
-
-            if not self.__terminateQueue.empty():
-                if self.__terminateQueue.get() == "terminate":
-                    self.__terminateQueue.put("")
-                    break
+                if not self.__terminateQueue.empty():
+                    if self.__terminateQueue.get() == "terminate":
+                        self.__terminateQueue.put("")
+                        break
 
     def captureVideos(self):
         """

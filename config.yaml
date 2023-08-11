@@ -36,3 +36,10 @@ interfaceCamera:
   dateTimeFormat: "%m-%d-%Y_%H:%M:%S.%f"
   imageFormat : ".png"
   continuousRecording : 3600
+  framesPerSecond : 1
+
+database:
+  user: root
+  password : admin
+  host: 0.0.0.0
+  database: predictions
