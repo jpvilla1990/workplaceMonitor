@@ -35,8 +35,8 @@ cameras:
 interfaceCamera:
   dateTimeFormat: "%m-%d-%Y_%H:%M:%S.%f"
   imageFormat : ".png"
-  continuousRecording : 3600
   framesPerSecond : 1
+  recordingRatePerSecond : 1
 
 database:
   user: root

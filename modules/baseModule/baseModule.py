@@ -13,6 +13,7 @@ class BaseModule(object):
         self.__paths : dict = self.__loadPaths()
         self.__dateTimeFormat : str = self.__config["interfaceCamera"]["dateTimeFormat"]
         self.__createFolders()
+        self.__createParamsFile()
 
     def __loadPaths(self):
         """
@@ -25,16 +26,58 @@ class BaseModule(object):
             "imagesDatabase" : os.path.join(rootPath, "data", "imagesDatabase"),
             "tmp" : os.path.join(rootPath, "data", "tmp"),
             "logs" : os.path.join(rootPath, "data", "logs"),
+            "params" : os.path.join(rootPath, "data", "params"),
         }
 
         files = {
-            "systemLog" : os.path.join(rootPath, "data", "logs", "log.txt")
+            "systemLog" : os.path.join(rootPath, "data", "logs", "log.txt"),
+            "databaseParams" : os.path.join(rootPath, "data", "params", "params.yaml"),
         }
 
         return {
             "folders" : folders,
             "files" : files,
         }
+    
+    def __createParamsFile(self):
+        """
+        Method to create params file
+        """
+        filePath : str = self.__paths["files"]["databaseParams"]
+        if os.path.exists(filePath) is False:
+            paramsContent : dict = {}
+            self.writeParams(paramsContent)
+
+    def writeParams(self, content : dict):
+        """
+        Method to write in the params file
+        """
+        filePath : str = self.__paths["files"]["databaseParams"]
+        BaseModule.writeYaml(filePath, content)
+
+    def getParams(self) -> dict:
+        """
+        Method to write in the params file
+        """
+        filePath : str = self.__paths["files"]["databaseParams"]
+        return BaseModule.readYaml(filePath)
+
+    def writeYaml(filePath : str, paramsContent : dict):
+        """
+        Static method to write in a yaml file
+        """
+        with open(filePath, 'w') as file:
+            yaml.dump(paramsContent, file)
+
+    def readYaml(filePath : str) -> dict:
+        """
+        Static method to read from a yaml file
+        """
+        content : dict
+        with open(filePath) as file:
+            content = yaml.safe_load(file)
+        
+        return content
 
     def writeLog(self, text : str, typeLog : str):
         """
@@ -80,11 +123,7 @@ class BaseModule(object):
         """
         rootPath : str = Path(os.path.abspath(__file__)).parents[2]
 
-        config : dict = dict()
-        with open(os.path.join(rootPath, "config.yaml")) as file:
-            config = yaml.safe_load(file)
-
-        return config
+        return BaseModule.readYaml(os.path.join(rootPath, "config.yaml"))
 
     def getConfig(self) -> dict:
         """

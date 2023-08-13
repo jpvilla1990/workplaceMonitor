@@ -11,6 +11,8 @@ from modules.interfaceDatabase.interfaceDatabase import InterfaceDatabase
 class InterfaceCamera(BaseModule):
     """
     Class to handle Cameras
+
+    IP camera: https://www.aranacorp.com/en/managing-an-ip-camera-with-python/
     """
     def __init__(self):
         super().__init__()
@@ -18,7 +20,6 @@ class InterfaceCamera(BaseModule):
         self.__interfaceCameraConfig : dict = self.getConfig()["interfaceCamera"]
         self.__dateTimeFormat : str = self.getConfig()["interfaceCamera"]["dateTimeFormat"]
         self.__imageFormat : str = self.getConfig()["interfaceCamera"]["imageFormat"]
-        self.__continuousRecording : str = self.getConfig()["interfaceCamera"]["continuousRecording"]
         self.__cameraImagesFolder : str = self.getPaths()["folders"]["imagesDatabase"]
         self.__processes : dict = dict()
         self.__cameraProcess : multiprocessing.Process
@@ -38,7 +39,7 @@ class InterfaceCamera(BaseModule):
             camera,
             datetime.now().strftime(self.__dateTimeFormat) + self.__imageFormat,
         )
-        
+
         self.__interfaceDatabase.storeNewFrame(imageName)
 
         Image.fromarray(frame).save(imageName)
@@ -61,11 +62,10 @@ class InterfaceCamera(BaseModule):
                         camera,
                     )
                 else:
-                    self.writeLog("Frame not available", "ERROR")
+                    break
 
                 if not self.__terminateQueue.empty():
-                    if self.__terminateQueue.get() == "terminate":
-                        self.__terminateQueue.put("")
+                    if "terminate" in self.__terminateQueue.get():
                         break
 
     def captureVideos(self):
@@ -81,21 +81,23 @@ class InterfaceCamera(BaseModule):
         index : int = 0
         firstCycleFinished : bool = False
         while(True):
-            if firstCycleFinished is False:
-                self.__processes[index].start()
             if index == len(self.__processes):
                 index = 0
                 firstCycleFinished = True
-                time.sleep(self.__continuousRecording)
-            if firstCycleFinished and self.__processes[index].is_alive():
-                self.__terminateQueue.put("terminate")
-                self.__processes[index].join()
+                time.sleep(self.__interfaceCameraConfig["recordingRatePerSecond"])
+            if firstCycleFinished is False:
+                self.__processes[index].start()
+            if firstCycleFinished:
+                if self.__processes[index].is_alive():
+                    self.__terminateQueue.put("terminate")
+                    self.__processes[index].join()
+                self.__processes.pop(index)
                 self.__processes[index] = multiprocessing.Process(target=self.__captureVideo, args=[cameras[index]])
                 self.__processes[index].start()
             index += 1
 
             if not self.__terminateQueue.empty():
-                if self.__terminateQueue.get() == "terminate":
+                if self.__terminateQueue.get() == "terminateAll":
                     break
 
     def startCaptureVideos(self):
@@ -109,4 +111,4 @@ class InterfaceCamera(BaseModule):
         """
         Method to stop videos capture
         """
-        self.__terminateQueue.put("terminate")
+        self.__terminateQueue.put("terminateAll")

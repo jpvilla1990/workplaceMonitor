@@ -2,22 +2,21 @@ tables = {
     "frames" : {
         "createTable" : """
 CREATE TABLE frames (
-    id int NOT NULL AUTO_INCREMENT PRIMARY KEY,
-    timeStamp VARCHAR(255) NOT NULL,
+    timestamp INT NOT NULL PRIMARY KEY,
+    timeStampStrf VARCHAR(255) NOT NULL,
     pathImage VARCHAR(255) NOT NULL,
-    personDetection BOOLEAN,
-    x_0 INT,
-    y_0 INT,
-    x_1 INT,
-    y_2 INT
+    personDetection BOOLEAN
 );
 """,
         "checkTable" : """
 SHOW TABLES LIKE 'frames'
 """,
         "insertNewFrame" : """
-INSERT INTO frames (timeStamp, pathImage, personDetection) VALUES (%s, %s, %s)
+INSERT INTO frames (timeStamp, timeStampStrf, pathImage, personDetection) VALUES (%s, %s, %s, %s)
 """,
+        "getIdLastPrediction" : """
+SELECT timeStamp FROM frames WHERE personDetection = 0 LIMIT 1;
+"""
     },
 }
 

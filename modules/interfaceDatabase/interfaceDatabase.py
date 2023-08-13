@@ -1,4 +1,5 @@
 import numpy as np
+from datetime import datetime
 import mysql.connector
 from modules.baseModule.baseModule import BaseModule
 from modules.interfaceDatabase import schemas
@@ -10,8 +11,29 @@ class InterfaceDatabase(BaseModule):
     def __init__(self):
         super().__init__()
         self.__config = self.getConfig()["database"]
-        self.__createkDatabase()
+        self.__dateTimeFormat : str = self.getConfig()["interfaceCamera"]["dateTimeFormat"]
+        self.__createDatabase()
         self.__initTables()
+        self.__timestampRef : float = self.__initParams()
+
+    def __initParams(self) -> float:
+        """
+        Tool to init params related to database
+        """
+        timestampRef : float
+        params : dict = self.getParams()
+        timestampRefKey : str = "timestampRef"
+        if timestampRefKey not in params:
+            timestampNow : float = datetime.now().timestamp()
+            params.update({
+                timestampRefKey : timestampNow,
+            })
+            self.writeParams(params)
+            timestampRef = timestampNow
+        else:
+            timestampRef = params[timestampRefKey]
+
+        return timestampRef
 
     def __initTables(self):
         """
@@ -28,7 +50,7 @@ class InterfaceDatabase(BaseModule):
         cursor.close()
         connection.close()
 
-    def __createkDatabase(self):
+    def __createDatabase(self):
         """
         Method to create database
         """
@@ -76,31 +98,58 @@ class InterfaceDatabase(BaseModule):
         cursor.close()
         connection.close()
 
+    def resetDatabase(self):
+        """
+        Method to reset database
+        """
+        for table in list(schemas.tables.keys()):
+            self.deleteTable(table)
+        self.__initTables()
+        params : dict = self.getParams()
+        timestampRefKey : str = "timestampRef"
+        params.pop(timestampRefKey)
+        self.writeParams(params)
+        self.__timestampRef : float = self.__initParams()
+
     def storeNewFrame(self, imagePath : str):
         """
         Method to store new frame in database
         """
-        timestamp : str = imagePath.split("/")[-1].split(".png")[0]
+        timestampStrf : str = imagePath.split("/")[-1].split(".png")[0]
+        timestampMilliseconds : int = int(datetime.strptime(timestampStrf, self.__dateTimeFormat).timestamp() - self.__timestampRef)
         connection : mysql.connector = self.__getConnection()
         cursor : any = connection.cursor()
         cursor.executemany(
             schemas.tables["frames"]["insertNewFrame"],
-            [(timestamp, imagePath, False)],
+            [(timestampMilliseconds, timestampStrf, imagePath, False)],
         )
 
         connection.commit()
         cursor.close()
         connection.close()
 
-    def getNextImagePersonDetection(self) -> np.ndarray:
+    def getLastEntryPersonDetected(self) -> int:
         """
-        Method to obtain next image for person detection to be predicted
+        Method to obtain last entry of person detected in database
         """
+        connection : mysql.connector = self.__getConnection()
+        cursor : any = connection.cursor()
+        cursor.execute(schemas.tables["frames"]["getIdLastPrediction"])
 
-    def getNextImageActionDetection(self) -> np.ndarray:
+        row : str = cursor.fetchone()
+
+        connection.commit()
+        cursor.close()
+        connection.close()
+
+        return int(row[0])
+
+    def getLastEntryActionDetected(self) -> int:
         """
-        Method to obtain next image for action detection to be predicted
+        Method to obtain last entry of action detected in database
         """
+        # TODO
+        return 0
 
     def writePredictionToDatabase(self, prediction : tuple, indexImage : str):
         """
