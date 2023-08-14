@@ -1,4 +1,5 @@
 import os
+import requests
 import shutil
 from datetime import datetime
 from pathlib import Path
@@ -32,6 +33,7 @@ class BaseModule(object):
         files = {
             "systemLog" : os.path.join(rootPath, "data", "logs", "log.txt"),
             "databaseParams" : os.path.join(rootPath, "data", "params", "params.yaml"),
+            "yoloWeights" : os.path.join(rootPath, "data", "params", self.__config["yolo"]["checkpoint"] + ".pt"),
         }
 
         return {
@@ -47,6 +49,15 @@ class BaseModule(object):
         if os.path.exists(filePath) is False:
             paramsContent : dict = {}
             self.writeParams(paramsContent)
+
+    def downloadYoloWeights(self, url : str) -> str:
+        """
+        Static method to download Url
+        """
+        if not os.path.exists(self.__paths["files"]["yoloWeights"]):
+            response = requests.get(url, allow_redirects=True)
+            open(self.__paths["files"]["yoloWeights"], 'wb').write(response.content)
+        return self.__paths["files"]["yoloWeights"]
 
     def writeParams(self, content : dict):
         """

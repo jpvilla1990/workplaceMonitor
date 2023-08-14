@@ -128,13 +128,13 @@ class InterfaceDatabase(BaseModule):
         cursor.close()
         connection.close()
 
-    def getLastEntryPersonDetected(self) -> int:
+    def __executeQuery(self, query : str) -> str:
         """
-        Method to obtain last entry of person detected in database
+        Tool to perform query
         """
         connection : mysql.connector = self.__getConnection()
         cursor : any = connection.cursor()
-        cursor.execute(schemas.tables["frames"]["getIdLastPrediction"])
+        cursor.execute(query)
 
         row : str = cursor.fetchone()
 
@@ -142,7 +142,23 @@ class InterfaceDatabase(BaseModule):
         cursor.close()
         connection.close()
 
-        return int(row[0])
+        return row
+
+    def getLastEntryPersonDetected(self) -> int:
+        """
+        Method to obtain last entry of person detected in database
+        """
+        resultQuery : str = self.__executeQuery(schemas.tables["frames"]["getIdLastPrediction"])
+
+        return int(resultQuery[0])
+    
+    def getImageFromTimestamp(self, timestamp : int):
+        """
+        Method to get image path from timestamp
+        """
+        resultQuery : str = self.__executeQuery(schemas.tables["frames"]["getImagePathFromTimestamp"].format(timestamp = str(timestamp)))
+
+        return str(resultQuery[0])
 
     def getLastEntryActionDetected(self) -> int:
         """
