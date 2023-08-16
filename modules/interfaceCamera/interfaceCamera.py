@@ -23,7 +23,6 @@ class InterfaceCamera(BaseModule):
         self.__cameraImagesFolder : str = self.getPaths()["folders"]["imagesDatabase"]
         self.__processes : dict = dict()
         self.__cameraProcess : multiprocessing.Process
-        self.__terminateQueue : multiprocessing.Queue = multiprocessing.Queue()
         self.__interfaceDatabase : InterfaceDatabase = InterfaceDatabase()
 
     def __del__(self):
@@ -64,9 +63,8 @@ class InterfaceCamera(BaseModule):
                 else:
                     break
 
-                if not self.__terminateQueue.empty():
-                    if "terminate" in self.__terminateQueue.get():
-                        break
+                if self.getProcessesState("interfaceCameraSubProcess" + camera) == "terminate":
+                    break
 
     def captureVideos(self):
         """
@@ -86,29 +84,39 @@ class InterfaceCamera(BaseModule):
                 firstCycleFinished = True
                 time.sleep(self.__interfaceCameraConfig["recordingRatePerSecond"])
             if firstCycleFinished is False:
+                self.updateProcessesState({
+                    "interfaceCameraSubProcess" + cameras[index] : "running",
+                })
                 self.__processes[index].start()
             if firstCycleFinished:
                 if self.__processes[index].is_alive():
-                    self.__terminateQueue.put("terminate")
+                    self.updateProcessesState({
+                        "interfaceCameraSubProcess" + cameras[index] : "terminate",
+                    })
                     self.__processes[index].join()
                 self.__processes.pop(index)
                 self.__processes[index] = multiprocessing.Process(target=self.__captureVideo, args=[cameras[index]])
                 self.__processes[index].start()
             index += 1
 
-            if not self.__terminateQueue.empty():
-                if self.__terminateQueue.get() == "terminateAll":
-                    break
+            if self.getProcessesState("interfaceCamera") == "terminate":
+                break
 
     def startCaptureVideos(self):
         """
         Method to capture videos from cameras in the background
         """
-        self.__cameraProcess : multiprocessing.Process = multiprocessing.Process(target=self.captureVideos)
+        self.__cameraProcess = multiprocessing.Process(target=self.captureVideos)
+        self.updateProcessesState({
+            "interfaceCamera" : "running",
+        })
         self.__cameraProcess.start()
 
     def stopCaptureVideos(self):
         """
         Method to stop videos capture
         """
-        self.__terminateQueue.put("terminateAll")
+        self.updateProcessesState({
+            "interfaceCamera" : "terminate",
+        })
+        self.__cameraProcess.join()

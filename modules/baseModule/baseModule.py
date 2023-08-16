@@ -1,6 +1,7 @@
 import os
 import requests
 import shutil
+import multiprocessing
 from datetime import datetime
 from pathlib import Path
 import yaml
@@ -15,6 +16,7 @@ class BaseModule(object):
         self.__dateTimeFormat : str = self.__config["interfaceCamera"]["dateTimeFormat"]
         self.__createFolders()
         self.__createParamsFile()
+        self.__queue : multiprocessing.Queue = multiprocessing.Queue()
 
     def __loadPaths(self):
         """
@@ -141,3 +143,47 @@ class BaseModule(object):
         Method to obtain config
         """
         return self.__config
+    
+    def updateProcessesState(self, state : dict):
+        """
+        Method to update the processes state
+        """
+        currentState : dict
+        if not self.__queue.empty():
+            currentState = self.__queue.get()
+        else:
+            currentState = dict()
+
+        for stateKey in list(state.keys()):
+            stateValue : str = state[stateKey]
+
+            currentState.update({
+                stateKey : stateValue,
+            })
+
+        self.__queue.put(currentState)
+
+    def getProcessesState(self, stateKey : str) -> str:
+        """
+        Method to get process state by key
+        """
+        if not self.__queue.empty():
+            currentState : dict = self.__queue.get()
+            if stateKey in currentState:
+                return currentState[stateKey]
+            else:
+                return ""
+        else:
+            return ""
+        
+    def getAllProcessesStates(self) -> dict:
+        """
+        Method to get the state of all processes
+        """
+        currenState : dict
+        if not self.__queue.empty():
+            currentState = self.__queue.get()
+        else:
+            currenState = dict()
+
+        return currenState

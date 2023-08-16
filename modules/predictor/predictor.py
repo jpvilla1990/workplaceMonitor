@@ -1,4 +1,4 @@
-import os
+import multiprocessing
 import numpy as np
 import torch
 from yolov6.layers.common import DetectBackend
@@ -17,39 +17,68 @@ class Predictor(BaseModule):
         self.__yoloConfig = self.getConfig()["yolo"]
         self.__yoloWeightsPath : str = self.__initYoloWeights()
         self.__interfaceDatabase : InterfaceDatabase = InterfaceDatabase()
-        self.__lastEntryPersonDetected, self.__lastEntryActionDetected = self.__initParams()
+        self.__nextEntryPersonDetected, self.__nextEntryActionDetected = self.__initParams()
         self.__videoProcessing : VideoProcessing = VideoProcessing()
         self.__device : torch.Tensor = self.__setupHardware()
         self.__modelPersonDetection : DetectBackend = self.__setupModelPersonDetection()
+        self.__personPredictionProcess : multiprocessing.Process
 
     def __initParams(self) -> tuple:
         """
         Tool to init params related to database
         """
-        lastEntryPersonDetected : int
-        lastEntryActionDetected : int
+        nextEntryPersonDetected : int
+        nextEntryActionDetected : int
         params : dict = self.getParams()
-        lastEntryPersonDetectedKey : str = "lastEntryPersonDetected"
-        lastEntryActionDetectedKey : str = "lastEntryActionDetected"
-        if lastEntryPersonDetectedKey not in params:
-            lastEntryPersonDetected = self.__interfaceDatabase.getLastEntryPersonDetected()
+        nextEntryPersonDetectedKey : str = "nextEntryPersonDetected"
+        nextEntryActionDetectedKey : str = "nextEntryActionDetected"
+        if nextEntryPersonDetectedKey not in params:
+            nextEntryPersonDetected = self.__interfaceDatabase.getNextEntryPersonDetected()
             params.update({
-                lastEntryPersonDetectedKey : lastEntryPersonDetected,
+                nextEntryPersonDetectedKey : nextEntryPersonDetected,
             })
         else:
-            lastEntryPersonDetected = params[lastEntryPersonDetectedKey]
+            nextEntryPersonDetected = params[nextEntryPersonDetectedKey]
 
-        if lastEntryActionDetectedKey not in params:
-            lastEntryActionDetected = self.__interfaceDatabase.getLastEntryActionDetected()
+        if nextEntryActionDetectedKey not in params:
+            nextEntryActionDetected = self.__interfaceDatabase.getNextEntryActionDetected()
             params.update({
-                lastEntryActionDetectedKey : lastEntryActionDetected,
+                nextEntryActionDetectedKey : nextEntryActionDetected,
             })
         else:
-            lastEntryActionDetected = params[lastEntryActionDetectedKey]
+            nextEntryActionDetected = params[nextEntryActionDetectedKey]
 
         self.writeParams(params)
 
-        return lastEntryPersonDetected, lastEntryActionDetected
+        return nextEntryPersonDetected, nextEntryActionDetected
+    
+    def __updateNextEntryPersonDetected(self):
+        """
+        Tool to update next entry of person detected
+        """
+        params : dict = self.getParams()
+        nextEntryPersonDetectedKey : str = "nextEntryPersonDetected"
+        nextEntryPersonDetected : int = self.__interfaceDatabase.getNextEntryPersonDetected()
+        params.update({
+            nextEntryPersonDetectedKey : nextEntryPersonDetected,
+        })
+        self.writeParams(params)
+
+        self.__nextEntryPersonDetected = nextEntryPersonDetected
+
+    def __updateNextEntryActionDetected(self):
+        """
+        Tool to update next entry of action detected
+        """
+        params : dict = self.getParams()
+        nextEntryActionDetectedKey : str = "nextEntryActionDetected"
+        nextEntryActionDetected : int = self.__interfaceDatabase.getNextEntryActionDetected()
+        params.update({
+            nextEntryActionDetectedKey : nextEntryActionDetected,
+        })
+        self.writeParams(params)
+
+        self.__nextEntryActionDetected = nextEntryActionDetected
 
     def __initYoloWeights(self):
         """
@@ -97,7 +126,13 @@ class Predictor(BaseModule):
         """
         Tool to get next image
         """
-        return str(self.__interfaceDatabase.getImageFromTimestamp(self.__lastEntryPersonDetected))
+        return str(self.__interfaceDatabase.getImageFromFrameId(self.__nextEntryPersonDetected))
+    
+    def __getObjectsNextFrame(self) -> dict:
+        """
+        Tool to get objects next image
+        """
+        self.__interfaceDatabase.getImageFromFrameId(self.__nextEntryActionDetected)
 
     def __predict(self, img : torch.Tensor, imageNumpy: np.ndarray) -> torch.Tensor:
         """
@@ -131,40 +166,66 @@ class Predictor(BaseModule):
             if classNum < len(classes) and conf > self.__yoloConfig["desiredConfidence"]:
                 coordinates.update({
                     index : {
-                        "x1" : xyxy[0],
-                        "y1" : xyxy[1],
-                        "x2" : xyxy[2],
-                        "y2" : xyxy[3],
+                        "x_0" : xyxy[0],
+                        "y_0" : xyxy[1],
+                        "x_1" : xyxy[2],
+                        "y_1" : xyxy[3],
                     }
                 })
                 index += 1
 
         return coordinates
-    
-    def __updateDatabasePerson(self, coordinates : list):
+
+    def __updateDatabasePerson(self, coordinates : dict):
         """
         Tool to update new persons detected
         """
-        self.__interfaceDatabase.updatePersonDetected(self.__lastEntryPersonDetected)
-        self.__interfaceDatabase.addNewObject(self.__lastEntryPersonDetected, coordinates)
-        self.__lastEntryPersonDetected = self.__interfaceDatabase.getLastEntryActionDetected()
+        self.__nextEntryPersonDetected
+        self.__interfaceDatabase.updatePersonDetected(self.__nextEntryPersonDetected)
+        for index in list(coordinates.keys()):
+            self.__interfaceDatabase.storeNewObject(
+                self.__nextEntryPersonDetected,
+                int(coordinates[index]["x_0"]),
+                int(coordinates[index]["y_0"]),
+                int(coordinates[index]["x_1"]),
+                int(coordinates[index]["y_1"]),
+            )
+        self.__updateNextEntryPersonDetected()
 
     def predictPerson(self):
         """
-        Method to perform prediction of a person
+        Tool to perform prediction of a person
         """
         imagePath = self.__getNextImage()
-        imageTensor, imageNumpy = self.__videoProcessing.processImageToTensorPersonDetection(
-            imagePath,
-            imgSize = self.__yoloConfig["imgSize"],
-            stride = self.__modelPersonDetection.stride,
-            half = self.__yoloConfig["half"],
-            device = self.__device,
-        )
+        try:
+            imageTensor, imageNumpy = self.__videoProcessing.processImageToTensorPersonDetection(
+                imagePath,
+                imgSize = self.__yoloConfig["imgSize"],
+                stride = self.__modelPersonDetection.stride,
+                half = self.__yoloConfig["half"],
+                device = self.__device,
+            )
+        except Exception as e:
+            self.writeLog("Image " + imagePath + " could not be processed" + str(e), "ERROR")
+            self.__updateDatabasePerson(dict())
+            return
 
-        prediction = self.__predict(imageTensor, imageNumpy)
+        prediction : torch.Tensor = self.__predict(imageTensor, imageNumpy)
 
         coordinates = self.__getCoordinatesPersons(prediction, imageTensor)
 
         self.__updateDatabasePerson(coordinates)
+
+    def predictAction(self):
+        """
+        Method to predict actions
+        """
+        self.__getObjectsNextFrame()
+
+    def predictLoop(self):
+        """
+        Method to run predict loop
+        """
+        while True:
+            self.predictPerson()
 

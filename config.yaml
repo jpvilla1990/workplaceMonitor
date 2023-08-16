@@ -43,3 +43,4 @@ database:
   password : admin
   host: 0.0.0.0
   database: predictions
+  sleepDatabase : 1

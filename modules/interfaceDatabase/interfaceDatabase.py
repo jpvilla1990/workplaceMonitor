@@ -1,4 +1,5 @@
 import numpy as np
+import time
 from datetime import datetime
 import mysql.connector
 from modules.baseModule.baseModule import BaseModule
@@ -44,6 +45,7 @@ class InterfaceDatabase(BaseModule):
         for table in list(schemas.tables.keys()):
             cursor.execute(schemas.tables[table]["checkTable"])
             if cursor.fetchone() is None:
+                print(schemas.tables[table]["createTable"])
                 cursor.execute(schemas.tables[table]["createTable"])
 
         connection.commit()
@@ -88,22 +90,17 @@ class InterfaceDatabase(BaseModule):
         """
         Method to delete a table
         """
-        connection : mysql.connector = self.__getConnection()
-        cursor : any = connection.cursor()
-        cursor.execute(
-            "DROP TABLE " + table + ";"
-        )
-
-        connection.commit()
-        cursor.close()
-        connection.close()
+        self.__executeQuery("DROP TABLE " + table + ";")
 
     def resetDatabase(self):
         """
         Method to reset database
         """
-        for table in list(schemas.tables.keys()):
-            self.deleteTable(table)
+        tables : list = list(schemas.tables.keys())
+        numberKeys : int = len(tables) - 1
+        while numberKeys >= 0:
+            self.deleteTable(tables[numberKeys])
+            numberKeys -= 1
         self.__initTables()
         params : dict = self.getParams()
         timestampRefKey : str = "timestampRef"
@@ -117,16 +114,13 @@ class InterfaceDatabase(BaseModule):
         """
         timestampStrf : str = imagePath.split("/")[-1].split(".png")[0]
         timestampMilliseconds : int = int(datetime.strptime(timestampStrf, self.__dateTimeFormat).timestamp() - self.__timestampRef)
-        connection : mysql.connector = self.__getConnection()
-        cursor : any = connection.cursor()
-        cursor.executemany(
-            schemas.tables["frames"]["insertNewFrame"],
-            [(timestampMilliseconds, timestampStrf, imagePath, False)],
-        )
 
-        connection.commit()
-        cursor.close()
-        connection.close()
+        self.__executeQuery(schemas.tables["frames"]["insertNewFrame"].format(
+            timestamp = timestampMilliseconds,
+            timestampStrf = timestampStrf,
+            pathImage = imagePath,
+            personDetection = 0,
+        ))
 
     def __executeQuery(self, query : str) -> str:
         """
@@ -144,28 +138,59 @@ class InterfaceDatabase(BaseModule):
 
         return row
 
-    def getLastEntryPersonDetected(self) -> int:
+    def getNextEntryPersonDetected(self) -> int:
         """
         Method to obtain last entry of person detected in database
         """
-        resultQuery : str = self.__executeQuery(schemas.tables["frames"]["getIdLastPrediction"])
+        resultQuery : list
+        while True:
+            resultQuery = self.__executeQuery(schemas.tables["frames"]["getFrameIdLastPersonPrediction"])
+            if resultQuery is None:
+                time.sleep(self.__config["sleepDatabase"])
+            else:
+                break
 
         return int(resultQuery[0])
     
-    def getImageFromTimestamp(self, timestamp : int):
+    def getImageFromFrameId(self, frameId : int):
         """
-        Method to get image path from timestamp
+        Method to get image path from frameId
         """
-        resultQuery : str = self.__executeQuery(schemas.tables["frames"]["getImagePathFromTimestamp"].format(timestamp = str(timestamp)))
+        resultQuery : str = self.__executeQuery(schemas.tables["frames"]["getImagePathFromFrameId"].format(frameId = str(frameId)))
 
         return str(resultQuery[0])
+    
+    def updatePersonDetected(self, frameId : int):
+        """
+        Method to update new person detected in frames table
+        """
+        self.__executeQuery(schemas.tables["frames"]["updateImagePathFromFrameId"].format(personDetection = 1, frameId = str(frameId)))
 
-    def getLastEntryActionDetected(self) -> int:
+    def storeNewObject(self, frameId : int, x_0 : int, y_0 : int, x_1 : int, y_1 : int):
+        """
+        Method to add new object detected in frame
+        """
+        self.__executeQuery(schemas.tables["objects"]["insertNewObject"].format(
+            frameId = frameId,
+            x_0 = str(x_0),
+            y_0 = str(y_0),
+            x_1 = str(x_1),
+            y_1 = str(y_1),
+        ))
+
+    def getNextEntryActionDetected(self) -> int:
         """
         Method to obtain last entry of action detected in database
         """
-        # TODO
-        return 0
+        resultQuery : list
+        while True:
+            resultQuery = self.__executeQuery(schemas.tables["frames"]["getFrameIdLastActionPrediction"])
+            if resultQuery is None:
+                time.sleep(self.__config["sleepDatabase"])
+            else:
+                break
+
+        return int(resultQuery[0])
 
     def writePredictionToDatabase(self, prediction : tuple, indexImage : str):
         """
