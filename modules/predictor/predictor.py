@@ -1,4 +1,3 @@
-import multiprocessing
 import numpy as np
 import torch
 from yolov6.layers.common import DetectBackend
@@ -313,4 +312,3 @@ class Predictor(BaseModule):
         while True:
             self.predictPerson()
             self.predictAction()
-

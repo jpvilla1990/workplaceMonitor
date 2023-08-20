@@ -1,4 +1,3 @@
-import numpy as np
 import time
 from datetime import datetime
 import mysql.connector
