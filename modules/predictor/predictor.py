@@ -15,40 +15,20 @@ class Predictor(BaseModule):
     def __init__(self):
         super().__init__()
         self.__yoloConfig = self.getConfig()["yolo"]
+        self.__actionsConfig = self.getConfig()["actions"]
         self.__yoloWeightsPath : str = self.__initYoloWeights()
         self.__interfaceDatabase : InterfaceDatabase = InterfaceDatabase()
-        self.__nextEntryPersonDetected, self.__nextEntryActionDetected = self.__initParams()
+        self.__nextEntryPersonDetected, self.__nextEntryActionDetected = self.__initParamsDetectionIndex()
         self.__videoProcessing : VideoProcessing = VideoProcessing()
         self.__device : torch.Tensor = self.__setupHardware()
         self.__modelPersonDetection : DetectBackend = self.__setupModelPersonDetection()
-        self.__personPredictionProcess : multiprocessing.Process
 
-    def __initParams(self) -> tuple:
+    def __initParamsDetectionIndex(self) -> tuple:
         """
         Tool to init params related to database
         """
-        nextEntryPersonDetected : int
-        nextEntryActionDetected : int
-        params : dict = self.getParams()
-        nextEntryPersonDetectedKey : str = "nextEntryPersonDetected"
-        nextEntryActionDetectedKey : str = "nextEntryActionDetected"
-        if nextEntryPersonDetectedKey not in params:
-            nextEntryPersonDetected = self.__interfaceDatabase.getNextEntryPersonDetected()
-            params.update({
-                nextEntryPersonDetectedKey : nextEntryPersonDetected,
-            })
-        else:
-            nextEntryPersonDetected = params[nextEntryPersonDetectedKey]
-
-        if nextEntryActionDetectedKey not in params:
-            nextEntryActionDetected = self.__interfaceDatabase.getNextEntryActionDetected()
-            params.update({
-                nextEntryActionDetectedKey : nextEntryActionDetected,
-            })
-        else:
-            nextEntryActionDetected = params[nextEntryActionDetectedKey]
-
-        self.writeParams(params)
+        nextEntryPersonDetected = self.__interfaceDatabase.getNextEntryPersonDetected()
+        nextEntryActionDetected = self.__interfaceDatabase.getNextEntryActionDetected()
 
         return nextEntryPersonDetected, nextEntryActionDetected
     
@@ -56,28 +36,14 @@ class Predictor(BaseModule):
         """
         Tool to update next entry of person detected
         """
-        params : dict = self.getParams()
-        nextEntryPersonDetectedKey : str = "nextEntryPersonDetected"
         nextEntryPersonDetected : int = self.__interfaceDatabase.getNextEntryPersonDetected()
-        params.update({
-            nextEntryPersonDetectedKey : nextEntryPersonDetected,
-        })
-        self.writeParams(params)
-
         self.__nextEntryPersonDetected = nextEntryPersonDetected
 
     def __updateNextEntryActionDetected(self):
         """
         Tool to update next entry of action detected
         """
-        params : dict = self.getParams()
-        nextEntryActionDetectedKey : str = "nextEntryActionDetected"
         nextEntryActionDetected : int = self.__interfaceDatabase.getNextEntryActionDetected()
-        params.update({
-            nextEntryActionDetectedKey : nextEntryActionDetected,
-        })
-        self.writeParams(params)
-
         self.__nextEntryActionDetected = nextEntryActionDetected
 
     def __initYoloWeights(self):
@@ -128,11 +94,26 @@ class Predictor(BaseModule):
         """
         return str(self.__interfaceDatabase.getImageFromFrameId(self.__nextEntryPersonDetected))
     
-    def __getObjectsNextFrame(self) -> dict:
+    def __getObjectsNextFrame(self) -> list:
         """
         Tool to get objects next image
         """
-        self.__interfaceDatabase.getImageFromFrameId(self.__nextEntryActionDetected)
+        return self.__interfaceDatabase.getObjectsIdFromFrameId(self.__nextEntryActionDetected)
+    
+    def __getActivePersons(self) -> list:
+        """
+        Tool to get persons that are still active
+        """
+        return self.__interfaceDatabase.getActivePersons()
+    
+    def __getCoordinates(self, personId : int = None, objectId : int = None) -> list:
+        """
+        Tool to get object 
+        """
+        if personId is not None:
+            return self.__interfaceDatabase.getCoordinatesByPersonId(personId)
+        elif objectId is not None:
+            return self.__interfaceDatabase.getCoordinatesByObjectId(objectId)
 
     def __predict(self, img : torch.Tensor, imageNumpy: np.ndarray) -> torch.Tensor:
         """
@@ -152,6 +133,33 @@ class Predictor(BaseModule):
             det[:, :4] = Inferer.rescale(img.shape[2:], det[:, :4], imageNumpy.shape).round()
 
         return det
+    
+    def __addNewPerson(self, objectId : int):
+        """
+        Tool to add new person in database
+        """
+        self.__interfaceDatabase.createNewPerson(objectId)
+        personId : int = self.__interfaceDatabase.getNewPerson()
+        self.__interfaceDatabase.updatePersonIdFromObjectId(objectId, personId)
+
+    def __updatePersonsAsCompleted(self, personId : int):
+        """
+        Tool to update person as completed
+        """
+        self.__interfaceDatabase.setPersonAsCompleted(personId)
+
+    def __getCurrenTimestamp(self) -> int:
+        """
+        Tool to get curren frame timestamp
+        """
+        return self.__interfaceDatabase.getTimestampFromFrameId(self.__nextEntryActionDetected)
+
+    def __getPersonTimestamp(self, personId : int) -> int:
+        """
+        Tool to get object timestamp
+        """
+        frameId : int = self.__interfaceDatabase.getFrameIdFromPersonId(personId)
+        return self.__interfaceDatabase.getTimestampFromFrameId(frameId)
 
     def __getCoordinatesPersons(self, prediction : torch.Tensor, image : torch.Tensor) -> dict:
         """
@@ -180,7 +188,6 @@ class Predictor(BaseModule):
         """
         Tool to update new persons detected
         """
-        self.__nextEntryPersonDetected
         self.__interfaceDatabase.updatePersonDetected(self.__nextEntryPersonDetected)
         for index in list(coordinates.keys()):
             self.__interfaceDatabase.storeNewObject(
@@ -191,6 +198,25 @@ class Predictor(BaseModule):
                 int(coordinates[index]["y_1"]),
             )
         self.__updateNextEntryPersonDetected()
+
+    def __compareCoordinates(self, coordinates1 : list, coordinates2 : list) -> tuple:
+        """
+        Tool to compare coordinates according to the configured tolerance
+        """
+        tolerance : float = self.__actionsConfig["boxTolerance"]
+        tolerated : bool = True
+        if int(coordinates1[0]) > (1 + tolerance) * int(coordinates2[0]) or int(coordinates1[0]) < (1 - tolerance) * int(coordinates2[0]):
+            tolerated = False
+        if int(coordinates1[1]) > (1 + tolerance) * int(coordinates2[1]) or int(coordinates1[1]) < (1 - tolerance) * int(coordinates2[1]):
+            tolerated = False
+        if int(coordinates1[2]) > (1 + tolerance) * int(coordinates2[2]) or int(coordinates1[2]) < (1 - tolerance) * int(coordinates2[2]):
+            tolerated = False
+        if int(coordinates1[3]) > (1 + tolerance) * int(coordinates2[3]) or int(coordinates1[3]) < (1 - tolerance) * int(coordinates2[3]):
+            tolerated = False
+
+        distance : float = ((((coordinates1[0] - coordinates2[0])**2) + ((coordinates1[1] - coordinates2[1])**2) + ((coordinates1[2] - coordinates2[2])**2) + ((coordinates1[3] - coordinates2[3])**2)) / len(coordinates1)) ** (1/2)
+
+        return tolerated, distance
 
     def predictPerson(self):
         """
@@ -220,7 +246,65 @@ class Predictor(BaseModule):
         """
         Method to predict actions
         """
-        self.__getObjectsNextFrame()
+        if self.__nextEntryActionDetected >= self.__nextEntryPersonDetected:
+            self.writeLog("The Action detection frame has reached Person detection frame", "WARNING")
+            return
+        objects : list = self.__getObjectsNextFrame()
+        persons : list = self.__getActivePersons()
+
+        currentObjectsCoordinates : dict = dict()
+        activePersonsCoordinates : dict = dict()
+
+        for object in objects:
+            currentObjectsCoordinates.update({
+                object : self.__getCoordinates(objectId=object),
+            })
+
+        for person in persons:
+            activePersonsCoordinates.update({
+                person : self.__getCoordinates(personId=person),
+            })
+
+        if len(objects) != 0 and len(persons) == 0:
+            for object in objects:
+                self.__addNewPerson(object)
+
+        if len(objects) == 0 and len(persons) != 0:
+            for person in persons:
+                self.__updatePersonsAsCompleted(person)
+
+        if len(objects) != 0 and len(persons) != 0:
+            currentTimestamp : int = self.__getCurrenTimestamp()
+            for person in persons:
+                personTimestamp : int = self.__getPersonTimestamp(person)
+
+                if personTimestamp - currentTimestamp > self.__actionsConfig["maxTimestampDifference"]:
+                    self.__updatePersonsAsCompleted(person)
+                else:
+                    distances : dict = dict()
+                    for object in list(currentObjectsCoordinates.keys()):
+                        comparison, distance = self.__compareCoordinates(
+                            currentObjectsCoordinates[object][0],
+                            activePersonsCoordinates[person][0],
+                        )
+
+                        if comparison:
+                            distances.update({
+                                object : distance,
+                            })
+
+                    if len(distances) > 0:
+                        minDistanceObject : float = min(distances, key=lambda k: distances[k])
+                        currentObjectsCoordinates.pop(minDistanceObject)
+                        self.__interfaceDatabase.updatePersonIdFromObjectId(minDistanceObject, person)
+                    else:
+                        self.__updatePersonsAsCompleted(person)
+
+            for object in list(currentObjectsCoordinates.keys()):
+                self.__addNewPerson(object)
+
+        self.__interfaceDatabase.updateActionDetected(self.__nextEntryActionDetected)
+        self.__updateNextEntryActionDetected()
 
     def predictLoop(self):
         """
@@ -228,4 +312,5 @@ class Predictor(BaseModule):
         """
         while True:
             self.predictPerson()
+            self.predictAction()
 

@@ -24,9 +24,12 @@ class InterfaceCamera(BaseModule):
         self.__processes : dict = dict()
         self.__cameraProcess : multiprocessing.Process
         self.__interfaceDatabase : InterfaceDatabase = InterfaceDatabase()
+        self.__runningProcess : bool = False
 
     def __del__(self):
-        self.stopCaptureVideos()
+        if self.__runningProcess:
+            if self.__cameraProcess.is_alive():
+                self.stopCaptureVideos()
 
     def __saveImage(self, frame : np.ndarray, camera : str):
         """
@@ -110,6 +113,7 @@ class InterfaceCamera(BaseModule):
         self.updateProcessesState({
             "interfaceCamera" : "running",
         })
+        self.__runningProcess = True
         self.__cameraProcess.start()
 
     def stopCaptureVideos(self):
@@ -119,4 +123,5 @@ class InterfaceCamera(BaseModule):
         self.updateProcessesState({
             "interfaceCamera" : "terminate",
         })
+        self.__runningProcess = False
         self.__cameraProcess.join()

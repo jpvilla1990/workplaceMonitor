@@ -14,7 +14,10 @@ CREATE TABLE frames (
 SHOW TABLES LIKE 'frames'
 """,
         "insertNewFrame" : """
-INSERT INTO frames (timestamp, timestampStrf, pathImage, personDetection) VALUES ({timestamp}, '{timestampStrf}', '{pathImage}', {personDetection});
+INSERT INTO frames (timestamp, timestampStrf, pathImage, personDetection, actionDetection) VALUES ({timestamp}, '{timestampStrf}', '{pathImage}', {personDetection}, {actionDetection});
+""",
+        "getTimestampFromFrameId" : """
+SELECT timestamp FROM frames WHERE frameId = {frameId};
 """,
         "getFrameIdLastPersonPrediction" : """
 SELECT frameId FROM frames WHERE personDetection = 0 ORDER BY frameId LIMIT 1;
@@ -25,8 +28,11 @@ SELECT frameId FROM frames WHERE actionDetection = 0 ORDER BY frameId LIMIT 1;
         "getImagePathFromFrameId" : """
 SELECT pathImage FROM frames WHERE frameId = {frameId};
 """,
-        "updateImagePathFromFrameId" : """
+        "updatePersonDetectionFromFrameId" : """
 UPDATE frames SET personDetection = {personDetection} WHERE frameId = {frameId};
+""",
+        "updateActionDetectionFromFrameId" : """
+UPDATE frames SET actionDetection = {actionDetection} WHERE frameId = {frameId};
 """,
     },
     "persons" : {
@@ -47,6 +53,9 @@ UPDATE persons SET personCompleted = {personCompleted} WHERE personId = {personI
 """,
         "getPersonsIdFromPersonCompleted" : """
 SELECT personId FROM persons WHERE personCompleted = {personCompleted};
+""",
+        "getNewPerson" : """
+SELECT personId FROM persons ORDER BY personId DESC LIMIT 1;
 """,
     },
     "objects" : {
@@ -74,6 +83,15 @@ UPDATE objects SET personId = {personId} WHERE objectId = {objectId};
 """,
         "getObjectsIdFromFrameId" : """
 SELECT objectId FROM objects WHERE frameId = {frameId};
+""",
+        "getFrameIdFromPersonId" : """
+SELECT frameId FROM objects WHERE personId = {personId} ORDER BY objectId DESC LIMIT 1;
+""",
+        "getCoordinatesByPersonId" : """
+SELECT x_0, y_0, x_1, y_1 FROM objects WHERE personId = {personId};
+""",
+        "getCoordinatesByObjectId" : """
+SELECT x_0, y_0, x_1, y_1 FROM objects WHERE objectId = {objectId};
 """,
     },
 }

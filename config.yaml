@@ -25,6 +25,7 @@ yolo:
 actions:
   boxTolerance: 0.02
   idleFrames: 5
+  maxTimestampDifference: 1
 
 log:
   maxLogSize: 100000000

@@ -45,7 +45,6 @@ class InterfaceDatabase(BaseModule):
         for table in list(schemas.tables.keys()):
             cursor.execute(schemas.tables[table]["checkTable"])
             if cursor.fetchone() is None:
-                print(schemas.tables[table]["createTable"])
                 cursor.execute(schemas.tables[table]["createTable"])
 
         connection.commit()
@@ -120,9 +119,10 @@ class InterfaceDatabase(BaseModule):
             timestampStrf = timestampStrf,
             pathImage = imagePath,
             personDetection = 0,
+            actionDetection = 0,
         ))
 
-    def __executeQuery(self, query : str) -> str:
+    def __executeQuery(self, query : str) -> list:
         """
         Tool to perform query
         """
@@ -130,13 +130,30 @@ class InterfaceDatabase(BaseModule):
         cursor : any = connection.cursor()
         cursor.execute(query)
 
-        row : str = cursor.fetchone()
+        results : list = list()
+
+        while True:
+            queryResult : tuple = cursor.fetchone()
+            if queryResult is not None:
+                if len(queryResult) > 1:
+                    elements : list = list()
+                    for element in queryResult:
+                        elements.append(element)
+                    results.append(
+                        elements
+                    )
+                else:
+                    results.append(
+                        queryResult[0]  
+                    )
+            else:
+                break
 
         connection.commit()
         cursor.close()
         connection.close()
 
-        return row
+        return results
 
     def getNextEntryPersonDetected(self) -> int:
         """
@@ -152,19 +169,93 @@ class InterfaceDatabase(BaseModule):
 
         return int(resultQuery[0])
     
-    def getImageFromFrameId(self, frameId : int):
+    def getImageFromFrameId(self, frameId : int) -> str:
         """
         Method to get image path from frameId
         """
-        resultQuery : str = self.__executeQuery(schemas.tables["frames"]["getImagePathFromFrameId"].format(frameId = str(frameId)))
+        resultQuery : list = self.__executeQuery(schemas.tables["frames"]["getImagePathFromFrameId"].format(frameId = str(frameId)))
 
         return str(resultQuery[0])
     
+    def getObjectsIdFromFrameId(self, frameId: int) -> list:
+        """
+        Method to get objectes from frame id
+        """
+        resultQuery : list = self.__executeQuery(schemas.tables["objects"]["getObjectsIdFromFrameId"].format(frameId = str(frameId)))
+        return resultQuery
+    
+    def getActivePersons(self) -> list:
+        """
+        Method to get active persons
+        """
+        resultQuery : list = self.__executeQuery(schemas.tables["persons"]["getPersonsIdFromPersonCompleted"].format(personCompleted = 0))
+        return resultQuery
+
+    def getCoordinatesByPersonId(self, personId : int) -> list:
+        """
+        Method to get coordinates by person id
+        """
+        resultQuery : list = self.__executeQuery(schemas.tables["objects"]["getCoordinatesByPersonId"].format(personId = personId))
+        return resultQuery
+    
+    def getCoordinatesByObjectId(self, objectId : int) -> list:
+        """
+        Method to get coordinates by person id
+        """
+        resultQuery : list = self.__executeQuery(schemas.tables["objects"]["getCoordinatesByObjectId"].format(objectId = objectId))
+        return resultQuery
+    
+    def createNewPerson(self, objectId : int):
+        """
+        Method to create a new person
+        """
+        self.__executeQuery(schemas.tables["persons"]["insertNewPerson"])
+
+    def getNewPerson(self) -> int:
+        """
+        Method to create a new person
+        """
+        resultQuery : list = self.__executeQuery(schemas.tables["persons"]["getNewPerson"])
+
+        return int(resultQuery[0])
+    def updatePersonIdFromObjectId(self, objectId : int, personId : int):
+        """
+        Method to update person id from object id
+        """
+        self.__executeQuery(schemas.tables["objects"]["updatePersonIdFromObjectId"].format(objectId = objectId, personId = personId))
+
     def updatePersonDetected(self, frameId : int):
         """
         Method to update new person detected in frames table
         """
-        self.__executeQuery(schemas.tables["frames"]["updateImagePathFromFrameId"].format(personDetection = 1, frameId = str(frameId)))
+        self.__executeQuery(schemas.tables["frames"]["updatePersonDetectionFromFrameId"].format(personDetection = 1, frameId = str(frameId)))
+
+    def updateActionDetected(self, frameId : int):
+        """
+        Method to update new person detected in frames table
+        """
+        self.__executeQuery(schemas.tables["frames"]["updateActionDetectionFromFrameId"].format(actionDetection = 1, frameId = str(frameId)))
+
+    def setPersonAsCompleted(self, personId: int):
+        """
+        Method to set persons as updated
+        """
+        self.__executeQuery(schemas.tables["persons"]["updatePersonCompletedFromPersonId"].format(personId = personId, personCompleted = 1))
+
+    def getTimestampFromFrameId(self, frameId : int) -> int:
+        """
+        Method to get timestamp from frame id
+        """
+        resultQuery : list = self.__executeQuery(schemas.tables["frames"]["getTimestampFromFrameId"].format(frameId = frameId))
+
+        return int(resultQuery[0])
+
+    def getFrameIdFromPersonId(self, personId : int) -> int:
+        """
+        Method to get frame id from object id
+        """
+        resultQuery : list = self.__executeQuery(schemas.tables["objects"]["getFrameIdFromPersonId"].format(personId = personId))
+        return int(resultQuery[0])
 
     def storeNewObject(self, frameId : int, x_0 : int, y_0 : int, x_1 : int, y_1 : int):
         """
