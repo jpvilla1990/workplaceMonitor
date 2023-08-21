@@ -1,4 +1,5 @@
 import numpy as np
+import time
 import torch
 from yolov6.layers.common import DetectBackend
 from yolov6.utils.nms import non_max_suppression
@@ -15,6 +16,7 @@ class Predictor(BaseModule):
         super().__init__()
         self.__yoloConfig = self.getConfig()["yolo"]
         self.__actionsConfig = self.getConfig()["actions"]
+        self.__predictionConfig = self.getConfig()["prediction"]
         self.__yoloWeightsPath : str = self.__initYoloWeights()
         self.__interfaceDatabase : InterfaceDatabase = InterfaceDatabase()
         self.__nextEntryPersonDetected, self.__nextEntryActionDetected = self.__initParamsDetectionIndex()
@@ -35,15 +37,27 @@ class Predictor(BaseModule):
         """
         Tool to update next entry of person detected
         """
-        nextEntryPersonDetected : int = self.__interfaceDatabase.getNextEntryPersonDetected()
-        self.__nextEntryPersonDetected = nextEntryPersonDetected
+        while True:
+            try:
+                nextEntryPersonDetected : int = self.__interfaceDatabase.getNextEntryPersonDetected()
+                self.__nextEntryPersonDetected = nextEntryPersonDetected
+                break
+            except Exception as e:
+                self.writeLog("Could not update new entry, " + e, "WARNING")
+                time.sleep(self.__predictionConfig["sleepPrediction"])
 
     def __updateNextEntryActionDetected(self):
         """
         Tool to update next entry of action detected
         """
-        nextEntryActionDetected : int = self.__interfaceDatabase.getNextEntryActionDetected()
-        self.__nextEntryActionDetected = nextEntryActionDetected
+        while True:
+            try:
+                nextEntryActionDetected : int = self.__interfaceDatabase.getNextEntryActionDetected()
+                self.__nextEntryActionDetected = nextEntryActionDetected
+                break
+            except Exception as e:
+                self.writeLog("Could not update new entry, " + str(e), "WARNING")
+                time.sleep(self.__predictionConfig["sleepPrediction"])
 
     def __initYoloWeights(self):
         """
@@ -113,6 +127,15 @@ class Predictor(BaseModule):
             return self.__interfaceDatabase.getCoordinatesByPersonId(personId)
         elif objectId is not None:
             return self.__interfaceDatabase.getCoordinatesByObjectId(objectId)
+        
+    def __getNumberFramesFromObjectId(self, objectId : int) -> int:
+        """
+        Tool to get number frames from object
+        """
+        personId : int = self.__interfaceDatabase.getPersonIdFromObjectId(objectId)
+        frames : list = self.__interfaceDatabase.getFramesFromPersonId(personId)
+
+        return len(frames)
 
     def __predict(self, img : torch.Tensor, imageNumpy: np.ndarray) -> torch.Tensor:
         """
@@ -137,7 +160,7 @@ class Predictor(BaseModule):
         """
         Tool to add new person in database
         """
-        self.__interfaceDatabase.createNewPerson(objectId)
+        self.__interfaceDatabase.createNewPerson()
         personId : int = self.__interfaceDatabase.getNewPerson()
         self.__interfaceDatabase.updatePersonIdFromObjectId(objectId, personId)
 
@@ -216,12 +239,35 @@ class Predictor(BaseModule):
         distance : float = ((((coordinates1[0] - coordinates2[0])**2) + ((coordinates1[1] - coordinates2[1])**2) + ((coordinates1[2] - coordinates2[2])**2) + ((coordinates1[3] - coordinates2[3])**2)) / len(coordinates1)) ** (1/2)
 
         return tolerated, distance
+    
+    def __createImagePrediction(self, objects : list):
+        """
+        Tool to create image prediction
+        """
+        imagePath : str = self.__getNextImage()
+
+        coordinatesDict : dict = dict()
+
+        for object in objects:
+            numberFrames : int = self.__getNumberFramesFromObjectId(object)
+            annotationIdle : bool = False
+
+            if numberFrames > self.__actionsConfig["idleFrames"]:
+                annotationIdle = True
+            coordinatesDict.update({
+                object : {
+                    "coordinates" : self.__getCoordinates(objectId=object),
+                    "annotation" : annotationIdle,
+                }
+            })
+
+        annotatedImagePath : str = self.__videoProcessing.annotateImage(imagePath, coordinatesDict)
 
     def predictPerson(self):
         """
         Tool to perform prediction of a person
         """
-        imagePath = self.__getNextImage()
+        imagePath : str = self.__getNextImage()
         try:
             imageTensor, imageNumpy = self.__videoProcessing.processImageToTensorPersonDetection(
                 imagePath,
@@ -237,7 +283,7 @@ class Predictor(BaseModule):
 
         prediction : torch.Tensor = self.__predict(imageTensor, imageNumpy)
 
-        coordinates = self.__getCoordinatesPersons(prediction, imageTensor)
+        coordinates : dict = self.__getCoordinatesPersons(prediction, imageTensor)
 
         self.__updateDatabasePerson(coordinates)
 
@@ -301,6 +347,8 @@ class Predictor(BaseModule):
 
             for object in list(currentObjectsCoordinates.keys()):
                 self.__addNewPerson(object)
+
+        self.__createImagePrediction(objects)
 
         self.__interfaceDatabase.updateActionDetected(self.__nextEntryActionDetected)
         self.__updateNextEntryActionDetected()

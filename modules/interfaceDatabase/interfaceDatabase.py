@@ -203,8 +203,8 @@ class InterfaceDatabase(BaseModule):
         """
         resultQuery : list = self.__executeQuery(schemas.tables["objects"]["getCoordinatesByObjectId"].format(objectId = objectId))
         return resultQuery
-    
-    def createNewPerson(self, objectId : int):
+
+    def createNewPerson(self):
         """
         Method to create a new person
         """
@@ -255,6 +255,20 @@ class InterfaceDatabase(BaseModule):
         """
         resultQuery : list = self.__executeQuery(schemas.tables["objects"]["getFrameIdFromPersonId"].format(personId = personId))
         return int(resultQuery[0])
+    
+    def getPersonIdFromObjectId(self, objectId : int) -> int:
+        """
+        Method to get person id from object id
+        """
+        resultQuery : list = self.__executeQuery(schemas.tables["objects"]["getPersonIdFromObjectId"].format(objectId = objectId))
+        return int(resultQuery[0])
+    
+    def getFramesFromPersonId(self, personId : int) -> list:
+        """
+        Method to get number of frames from person id
+        """
+        resultQuery : list = self.__executeQuery(schemas.tables["objects"]["getFramesFromPersonId"].format(personId = personId))
+        return resultQuery
 
     def storeNewObject(self, frameId : int, x_0 : int, y_0 : int, x_1 : int, y_1 : int):
         """

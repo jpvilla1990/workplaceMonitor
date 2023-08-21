@@ -59,3 +59,10 @@ class VideoProcessing(BaseModule):
         image, imageIndex = self.__interfaceDatabse.getNextImage()
         prediction : tuple = self.__detectPersons(image)
         self.__interfaceDatabse.writePredictionToDatabase(prediction, imageIndex)
+
+    def annotateImage(self, imagePath : str, coordinatesDict : dict) -> str:
+        """
+        Method to annotate image
+        """
+        annotatedImagePath : str
+        return annotatedImagePath

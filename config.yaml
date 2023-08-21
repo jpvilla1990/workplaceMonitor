@@ -24,8 +24,11 @@ yolo:
 
 actions:
   boxTolerance: 0.02
-  idleFrames: 5
+  idleFrames: 60
   maxTimestampDifference: 1
+
+prediction:
+  sleepPrediction: 1
 
 log:
   maxLogSize: 100000000

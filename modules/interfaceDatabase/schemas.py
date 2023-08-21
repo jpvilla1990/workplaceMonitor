@@ -6,6 +6,7 @@ CREATE TABLE frames (
     timestamp INT NOT NULL,
     timestampStrf VARCHAR(255) NOT NULL,
     pathImage VARCHAR(255) NOT NULL,
+    pathImagePredict VARCHAR(255),
     personDetection BOOLEAN,
     actionDetection BOOLEAN
 );
@@ -84,11 +85,17 @@ UPDATE objects SET personId = {personId} WHERE objectId = {objectId};
         "getObjectsIdFromFrameId" : """
 SELECT objectId FROM objects WHERE frameId = {frameId};
 """,
+        "getPersonIdFromObjectId" : """
+SELECT personId FROM objects WHERE objectId = {objectId};
+""",
         "getFrameIdFromPersonId" : """
 SELECT frameId FROM objects WHERE personId = {personId} ORDER BY objectId DESC LIMIT 1;
 """,
         "getCoordinatesByPersonId" : """
 SELECT x_0, y_0, x_1, y_1 FROM objects WHERE personId = {personId};
+""",
+        "getFramesFromPersonId" : """
+SELECT objectId FROM objects WHERE personId = {personId};
 """,
         "getCoordinatesByObjectId" : """
 SELECT x_0, y_0, x_1, y_1 FROM objects WHERE objectId = {objectId};
