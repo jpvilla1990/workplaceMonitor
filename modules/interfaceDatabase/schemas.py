@@ -35,22 +35,33 @@ UPDATE frames SET personDetection = {personDetection} WHERE frameId = {frameId};
         "updateActionDetectionFromFrameId" : """
 UPDATE frames SET actionDetection = {actionDetection} WHERE frameId = {frameId};
 """,
+        "updateAnnotatedImagePathFromFrameId" : """
+UPDATE frames SET pathImagePredict = '{pathImagePredict}' WHERE frameId = {frameId};
+""",
     },
     "persons" : {
         "createTable" : """
 CREATE TABLE persons (
     personId INT AUTO_INCREMENT PRIMARY KEY,
-    personCompleted BOOLEAN
+    pathVideoPredict VARCHAR(255),
+    personCompleted BOOLEAN,
+    idleClasification BOOLEAN
 );
 """,
         "checkTable" : """
 SHOW TABLES LIKE 'persons'
 """,
         "insertNewPerson" : """
-INSERT INTO persons (personCompleted) VALUES (0);
+INSERT INTO persons (personCompleted, idleClasification) VALUES (0, 0);
 """,
         "updatePersonCompletedFromPersonId" : """
 UPDATE persons SET personCompleted = {personCompleted} WHERE personId = {personId};
+""",
+        "updateVideoPathFromPersonId" : """
+UPDATE persons SET pathVideoPredict = '{pathVideoPredict}' WHERE personId = {personId};
+""",
+        "updateIdleClasificationFromPersonId" : """
+UPDATE persons SET idleClasification = {idleClasification} WHERE personId = {personId};
 """,
         "getPersonsIdFromPersonCompleted" : """
 SELECT personId FROM persons WHERE personCompleted = {personCompleted};
@@ -58,6 +69,9 @@ SELECT personId FROM persons WHERE personCompleted = {personCompleted};
         "getNewPerson" : """
 SELECT personId FROM persons ORDER BY personId DESC LIMIT 1;
 """,
+        "getNextPersonIdVideoToStore" : """
+SELECT personId FROM persons WHERE idleClasification = 1 AND personCompleted = 1 AND pathVideoPredict IS NULL LIMIT 1;
+"""
     },
     "objects" : {
         "createTable" : """
@@ -93,6 +107,9 @@ SELECT frameId FROM objects WHERE personId = {personId} ORDER BY objectId DESC L
 """,
         "getCoordinatesByPersonId" : """
 SELECT x_0, y_0, x_1, y_1 FROM objects WHERE personId = {personId};
+""",
+        "getObjectsIdFromPersonId" : """
+SELECT x_0, y_0, x_1, y_1, frameId FROM objects WHERE personId = {personId};
 """,
         "getFramesFromPersonId" : """
 SELECT objectId FROM objects WHERE personId = {personId};

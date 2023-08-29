@@ -107,6 +107,12 @@ class Predictor(BaseModule):
         """
         return str(self.__interfaceDatabase.getImageFromFrameId(self.__nextEntryPersonDetected))
     
+    def __getImageCurrentActionPrediction(self) -> str:
+        """
+        Tool to get image of current action prediction index
+        """
+        return str(self.__interfaceDatabase.getImageFromFrameId(self.__nextEntryActionDetected))
+    
     def __getObjectsNextFrame(self) -> list:
         """
         Tool to get objects next image
@@ -170,11 +176,24 @@ class Predictor(BaseModule):
         """
         self.__interfaceDatabase.setPersonAsCompleted(personId)
 
+    def __updatePersonAsIdle(self, objectId : int):
+        """
+        Tool to classify person as idle
+        """
+        personId : int = self.__interfaceDatabase.getPersonIdFromObjectId(objectId)
+        self.__interfaceDatabase.setIdleClasification(personId)
+
     def __getCurrenTimestamp(self) -> int:
         """
-        Tool to get curren frame timestamp
+        Tool to get current frame timestamp
         """
         return self.__interfaceDatabase.getTimestampFromFrameId(self.__nextEntryActionDetected)
+    
+    def __updateAnnotatedImagePath(self, imagePath : str):
+        """
+        Tool to update annotated image
+        """
+        self.__interfaceDatabase.setAnnotatedImagePath(imagePath, self.__nextEntryActionDetected)
 
     def __getPersonTimestamp(self, personId : int) -> int:
         """
@@ -182,6 +201,37 @@ class Predictor(BaseModule):
         """
         frameId : int = self.__interfaceDatabase.getFrameIdFromPersonId(personId)
         return self.__interfaceDatabase.getTimestampFromFrameId(frameId)
+    
+    def __getImagesFromPersonId(self, personId) -> dict:
+        """
+        Tool to get images from Person Id
+        """
+        objects : list = self.__interfaceDatabase.getObjectsFromPersonId(personId)
+
+        images : dict = dict()
+        index : int = 0
+        for object in objects:
+            x0 : int = int(object[0])
+            y0 : int = int(object[1])
+            x1 : int = int(object[2])
+            y1 : int = int(object[3])
+            frameId : int = int(object[4])
+
+            framePath : str = self.__interfaceDatabase.getImageFromFrameId(frameId)
+
+            images.update({
+                index : {
+                    "x0" : x0,
+                    "y0" : y0,
+                    "x1" : x1,
+                    "y1" : y1,
+                    "framePath" : framePath,
+                }
+            })
+
+            index += 1
+
+        return images
 
     def __getCoordinatesPersons(self, prediction : torch.Tensor, image : torch.Tensor) -> dict:
         """
@@ -244,7 +294,7 @@ class Predictor(BaseModule):
         """
         Tool to create image prediction
         """
-        imagePath : str = self.__getNextImage()
+        imagePath : str = self.__getImageCurrentActionPrediction()
 
         coordinatesDict : dict = dict()
 
@@ -254,14 +304,17 @@ class Predictor(BaseModule):
 
             if numberFrames > self.__actionsConfig["idleFrames"]:
                 annotationIdle = True
+                self.__updatePersonAsIdle(object)
             coordinatesDict.update({
                 object : {
-                    "coordinates" : self.__getCoordinates(objectId=object),
+                    "coordinates" : self.__getCoordinates(objectId=object)[0],
                     "annotation" : annotationIdle,
                 }
             })
 
         annotatedImagePath : str = self.__videoProcessing.annotateImage(imagePath, coordinatesDict)
+
+        self.__updateAnnotatedImagePath(annotatedImagePath)
 
     def predictPerson(self):
         """
@@ -286,6 +339,21 @@ class Predictor(BaseModule):
         coordinates : dict = self.__getCoordinatesPersons(prediction, imageTensor)
 
         self.__updateDatabasePerson(coordinates)
+
+    def createPredictionVideo(self):
+        """
+        Method to create videos if exists new clasification
+        """
+        nextPerson : list = self.__interfaceDatabase.getNextVideo()
+        if len(nextPerson) == 0:
+            return
+        else:
+            personId : int = int(nextPerson[0])
+            images : dict = self.__getImagesFromPersonId(personId)
+
+            videoPath : str = self.__videoProcessing.createVideoFromImages(images, personId)
+
+            self.__interfaceDatabase.updateVideoPath(videoPath, personId)
 
     def predictAction(self):
         """
@@ -360,3 +428,4 @@ class Predictor(BaseModule):
         while True:
             self.predictPerson()
             self.predictAction()
+            self.createPredictionVideo()

@@ -27,6 +27,7 @@ class BaseModule(object):
         folders = {
             "data" : os.path.join(rootPath, "data"),
             "imagesDatabase" : os.path.join(rootPath, "data", "imagesDatabase"),
+            "videosPersonsIdle" : os.path.join(rootPath, "data", "videosPersonsIdle"),
             "tmp" : os.path.join(rootPath, "data", "tmp"),
             "logs" : os.path.join(rootPath, "data", "logs"),
             "params" : os.path.join(rootPath, "data", "params"),

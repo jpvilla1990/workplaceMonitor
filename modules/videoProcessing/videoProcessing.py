@@ -1,8 +1,11 @@
+import os
 import numpy as np
+import cv2
 import torch
 from PIL import Image
 import torchvision
 from yolov6.data.data_augment import letterbox
+from yolov6.core.inferer import Inferer
 from modules.interfaceDatabase.interfaceDatabase import InterfaceDatabase
 from modules.baseModule.baseModule import BaseModule
 
@@ -12,7 +15,7 @@ class VideoProcessing(BaseModule):
     """
     def __init__(self):
         super().__init__()
-        self.__interfaceDatabse : InterfaceDatabase = InterfaceDatabase()
+        self.__interfaceDatabase : InterfaceDatabase = InterfaceDatabase()
 
     def __imageToTensor(self, imageNumpy : np.ndarray, imgSize : list, stride : int, half : bool, device : str) -> tuple:
         """
@@ -52,17 +55,63 @@ class VideoProcessing(BaseModule):
             device=device,
         )
 
-    def detectPerson(self):
-        """
-        Method to detect Person and write to the database the objects
-        """
-        image, imageIndex = self.__interfaceDatabse.getNextImage()
-        prediction : tuple = self.__detectPersons(image)
-        self.__interfaceDatabse.writePredictionToDatabase(prediction, imageIndex)
-
     def annotateImage(self, imagePath : str, coordinatesDict : dict) -> str:
         """
         Method to annotate image
         """
-        annotatedImagePath : str
+        folderImages : str = os.path.dirname(imagePath)
+        imageName : str = os.path.basename(imagePath)
+        annotatedImagePath : str = os.path.join(
+            folderImages,
+            imageName.split(".png")[0] + "Annotated.png",
+        )
+        imgNumpy : np.ndarray = np.asarray(
+            Image.open(imagePath)
+        )
+        color : int = 0
+        for objectKey in list(coordinatesDict.keys()):
+            coordinates : list = coordinatesDict[objectKey]["coordinates"]
+            label : str
+
+            if coordinatesDict[objectKey]["annotation"]:
+                label = "not working"
+            else:
+                label = "working"
+            Inferer.plot_box_and_label(imgNumpy, max(round(sum(imgNumpy.shape) / 2 * 0.003), 2), coordinates, label, color=Inferer.generate_colors(color, True))
+            color += 1
+
+        Image.fromarray(imgNumpy).save(annotatedImagePath)
+
         return annotatedImagePath
+    
+    def createVideoFromImages(self, images : dict, index : int) -> str:
+        """
+        Method to create video from images
+        """
+        fps : int = self.getConfig()["interfaceCamera"]["framesPerSecond"]
+
+        imagePil : Image = Image.open(images[0]["framePath"])
+        width, height = imagePil.size
+
+        videosFolder : str = self.getPaths()["folders"]["videosPersonsIdle"]
+        videoFile : str = os.path.join(videosFolder, str(index) + ".mp4")
+
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        videoWriter = cv2.VideoWriter(videoFile, fourcc, fps, (width, height))
+        for imageIndex in list(images.keys()):
+            imgNumpy : np.ndarray = np.asarray(
+                Image.open(images[imageIndex]["framePath"])
+            )
+
+            coordinates : list = [images[imageIndex]["x0"], images[imageIndex]["y0"], images[imageIndex]["x1"], images[imageIndex]["y1"]]
+
+            Inferer.plot_box_and_label(imgNumpy, max(round(sum(imgNumpy.shape) / 2 * 0.003), 2), coordinates, "", color=Inferer.generate_colors(1, True))
+
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+
+            cvImage = cv2.cvtColor(imgNumpy, cv2.COLOR_RGB2BGR)
+            videoWriter.write(cvImage)
+
+        videoWriter.release()
+
+        return videoFile

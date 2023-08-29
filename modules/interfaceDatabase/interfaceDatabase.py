@@ -161,7 +161,7 @@ class InterfaceDatabase(BaseModule):
         resultQuery : list
         while True:
             resultQuery = self.__executeQuery(schemas.tables["frames"]["getFrameIdLastPersonPrediction"])
-            if resultQuery is None:
+            if len(resultQuery) == 0:
                 time.sleep(self.__config["sleepDatabase"])
             else:
                 break
@@ -176,9 +176,22 @@ class InterfaceDatabase(BaseModule):
 
         return str(resultQuery[0])
     
+    def getObjectsFromPersonId(self, personId : int) -> list:
+        """
+        Method to get objects from person id
+        """
+        resultQuery : list = self.__executeQuery(schemas.tables["objects"]["getObjectsIdFromPersonId"].format(personId = str(personId)))
+        return resultQuery
+    
+    def updateVideoPath(self, videoPath : str, personId : int):
+        """
+        Method to update video path by person id
+        """
+        self.__executeQuery(schemas.tables["persons"]["updateVideoPathFromPersonId"].format(pathVideoPredict = videoPath, personId = personId))
+
     def getObjectsIdFromFrameId(self, frameId: int) -> list:
         """
-        Method to get objectes from frame id
+        Method to get objects from frame id
         """
         resultQuery : list = self.__executeQuery(schemas.tables["objects"]["getObjectsIdFromFrameId"].format(frameId = str(frameId)))
         return resultQuery
@@ -241,6 +254,18 @@ class InterfaceDatabase(BaseModule):
         """
         self.__executeQuery(schemas.tables["persons"]["updatePersonCompletedFromPersonId"].format(personId = personId, personCompleted = 1))
 
+    def setIdleClasification(self, personId: int):
+        """
+        Method to set persons as updated
+        """
+        self.__executeQuery(schemas.tables["persons"]["updateIdleClasificationFromPersonId"].format(personId = personId, idleClasification = 1))
+
+    def setAnnotatedImagePath(self, imagePath : str, frameId : int):
+        """
+        Method to update annotated image path by frame id
+        """
+        self.__executeQuery(schemas.tables["frames"]["updateAnnotatedImagePathFromFrameId"].format(pathImagePredict = imagePath, frameId = str(frameId)))
+
     def getTimestampFromFrameId(self, frameId : int) -> int:
         """
         Method to get timestamp from frame id
@@ -269,6 +294,13 @@ class InterfaceDatabase(BaseModule):
         """
         resultQuery : list = self.__executeQuery(schemas.tables["objects"]["getFramesFromPersonId"].format(personId = personId))
         return resultQuery
+    
+    def getNextVideo(self) -> list:
+        """
+        Method to get next video to store, return personId
+        """
+        resultQuery : list = self.__executeQuery(schemas.tables["persons"]["getNextPersonIdVideoToStore"])
+        return resultQuery
 
     def storeNewObject(self, frameId : int, x_0 : int, y_0 : int, x_1 : int, y_1 : int):
         """
@@ -289,7 +321,7 @@ class InterfaceDatabase(BaseModule):
         resultQuery : list
         while True:
             resultQuery = self.__executeQuery(schemas.tables["frames"]["getFrameIdLastActionPrediction"])
-            if resultQuery is None:
+            if len(resultQuery) == 0:
                 time.sleep(self.__config["sleepDatabase"])
             else:
                 break
