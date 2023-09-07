@@ -28,6 +28,7 @@ def reset():
     """
     bash.stopBashScript("camera")
     bash.stopBashScript("predictor")
+    bash.deleteCameraImages()
     interfaceDatabase.resetDatabase()
     interfaceDatabase.writeParams({})
 

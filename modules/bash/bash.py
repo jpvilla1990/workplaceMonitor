@@ -8,19 +8,25 @@ class Bash(BaseModule):
     """
     def __init__(self):
         super().__init__()
-        self.__processes = {
+        self.__processes : dict = {
             "camera" : None,
             "predictor" : None,
         }
 
-        self.__executable = "python3"
+        self.__executable : str = "python3"
 
-        self.__paths = self.getPaths()
+        self.__paths : dict = self.getPaths()
 
-        self.__scripts = {
+        self.__scripts : dict = {
             "camera" : self.__paths["files"]["cameraScript"],
             "predictor" : self.__paths["files"]["predictorScript"],
         }
+
+    def deleteCameraImages(self):
+        """
+        Method to delete camera images
+        """
+        self.executeBashCommand("rm -rf " + self.__paths["folders"]["imagesDatabase"] + "/*")
 
     def __killProcessByScript(self, scriptName : str):
         """
@@ -29,7 +35,6 @@ class Bash(BaseModule):
         for process in psutil.process_iter(['pid', 'name', 'cmdline']):
             try:
                 if self.__executable in process.info['name'] and scriptName in ' '.join(process.info['cmdline']):
-                    print(int(process.info['pid']))
                     self.executeBashCommand("kill " + str(process.info['pid']))
             except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
                 pass
@@ -58,7 +63,7 @@ class Bash(BaseModule):
         """
         Start predictor script
         """
-        executable : str = "python3"
+        executable : str = self.__executable
         self.startBashScript(executable, "predictor")
 
     def startCameraScript(self):
@@ -66,7 +71,7 @@ class Bash(BaseModule):
         Start predictor script
         """
         predictorScript : str = self.__paths["files"]["cameraScript"]
-        executable : str = "python3"
+        executable : str = self.__executable
         self.startBashScript(executable, "camera")
 
     def executeBashCommand(self, command : str):
