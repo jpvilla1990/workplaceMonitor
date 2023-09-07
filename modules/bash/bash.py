@@ -13,7 +13,7 @@ class Bash(BaseModule):
             "predictor" : None,
         }
 
-        self.__executable : str = "python3"
+        self.__executable : str = self.getConfig()["bash"]["executable"]
 
         self.__paths : dict = self.getPaths()
 
@@ -36,8 +36,8 @@ class Bash(BaseModule):
             try:
                 if self.__executable in process.info['name'] and scriptName in ' '.join(process.info['cmdline']):
                     self.executeBashCommand("kill " + str(process.info['pid']))
-            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-                pass
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess) as e:
+                self.writeLog("Process could not be killed: " + str(e), "WARNING")
 
     def startBashScript(self, executable : str, process : str):
         """

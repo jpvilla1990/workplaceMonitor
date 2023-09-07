@@ -48,3 +48,6 @@ database:
   host: 0.0.0.0
   database: predictions
   sleepDatabase : 1
+
+bash:
+  executable: python3
