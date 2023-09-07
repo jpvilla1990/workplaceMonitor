@@ -37,6 +37,8 @@ class BaseModule(object):
             "systemLog" : os.path.join(rootPath, "data", "logs", "log.txt"),
             "databaseParams" : os.path.join(rootPath, "data", "params", "params.yaml"),
             "yoloWeights" : os.path.join(rootPath, "data", "params", self.__config["yolo"]["checkpoint"] + ".pt"),
+            "predictorScript" : os.path.join(rootPath, "predictorScript.py"),
+            "cameraScript" : os.path.join(rootPath, "cameraScript.py"),
         }
 
         return {

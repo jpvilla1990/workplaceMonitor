@@ -26,10 +26,10 @@ class InterfaceCamera(BaseModule):
         self.__interfaceDatabase : InterfaceDatabase = InterfaceDatabase()
         self.__runningProcess : bool = False
 
-    def __del__(self):
-        if self.__runningProcess:
-            if self.__cameraProcess.is_alive():
-                self.stopCaptureVideos()
+    #def __del__(self):
+    #    if self.__runningProcess:
+    #        if self.__cameraProcess.is_alive():
+    #            self.stopCaptureVideos()
 
     def __saveImage(self, frame : np.ndarray, camera : str):
         """
@@ -46,7 +46,7 @@ class InterfaceCamera(BaseModule):
 
         Image.fromarray(frame).save(imageName)
 
-    def __captureVideo(self, camera : str):
+    def captureVideo(self, camera : str):
         """
         Method to get Images from Camera
         """
@@ -76,7 +76,7 @@ class InterfaceCamera(BaseModule):
         cameras : list = list(self.__cameraConfig.keys())
         for index in range(len(cameras)):
             self.__processes.update({
-                index : multiprocessing.Process(target=self.__captureVideo, args=[cameras[index]])
+                index : multiprocessing.Process(target=self.captureVideo, args=[cameras[index]])
             })
 
         index : int = 0
@@ -98,7 +98,7 @@ class InterfaceCamera(BaseModule):
                     })
                     self.__processes[index].join()
                 self.__processes.pop(index)
-                self.__processes[index] = multiprocessing.Process(target=self.__captureVideo, args=[cameras[index]])
+                self.__processes[index] = multiprocessing.Process(target=self.captureVideo, args=[cameras[index]])
                 self.__processes[index].start()
             index += 1
 

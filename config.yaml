@@ -6,7 +6,7 @@ yolo:
   half : false #@param {type:"boolean"}
   classes :
     - person
-  desiredConfidence : 0.3
+  desiredConfidence : 0.5
 
   hide_labels: false #@param {type:"boolean"}
   hide_conf: false #@param {type:"boolean"}
