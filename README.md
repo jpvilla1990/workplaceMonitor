@@ -38,7 +38,7 @@ After the backend is running the container will be assigned to the port 8080 (ca
 
 - localhost:8080/cameraCapture/start : start capture from cameras IP
 - localhost:8080/cameraCapture/stop : stop capture
-- localhost:8080/predictor/start : start predictions to captured frames
+- localhost:8080/predictor/start : start predictions from captured frames (trigger this command frequently, around every 5 minutes)
 - localhost:8080/predictor/stop : stop predictions
 - localhost:8080/reset : reset database and captured images, recommended to run this every day to avoid excess storage.
 
