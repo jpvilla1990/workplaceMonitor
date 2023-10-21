@@ -44,5 +44,9 @@ After the backend is running the container will be assigned to the port 8080 (ca
 
 The backend will fill the database with all the needed information to enable the creation of any kind of efficiency reports, as well the videos of persons non working will be stored in the folder mentioned beforehand.
 
+## Notes
+
+The predictor relies on the pretrain model from YOLOv6, therefore may behave differently between one to other environment and surroundings, therefore is better to play with the config file (tolerance) to find the best trade off, the algorithm does not detect 100% all persons so this backend should not be a primary source or efficiency report, rather it should be an assitant tool where each generated video is reviewed to describe tendencies in the workplace
+
 ## Tech Stack:
 python3, pytorch, uvicorn, fastApi, mysql, YOLOv6, docker
