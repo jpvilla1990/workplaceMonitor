@@ -46,7 +46,11 @@ The backend will fill the database with all the needed information to enable the
 
 ## Notes
 
-The predictor relies on the pretrain model from YOLOv6, therefore may behave differently between one to other environment and surroundings, therefore is better to play with the config file (tolerance) to find the best trade off, the algorithm does not detect 100% all persons so this backend should not be a primary source or efficiency report, rather it should be an assitant tool where each generated video is reviewed to describe tendencies in the workplace
+- The predictor relies on the pretrain model from YOLOv6, therefore may behave differently between one to other environment and surroundings, therefore is better to play with the config file (tolerance) to find the best trade off
+- The algorithm does not detect 100% all persons so this backend should not be a primary source or efficiency report, rather it should be an assitant tool where each generated video is reviewed to describe tendencies in the workplace
+- The back end was tested in a development environment, hence for in production set up is suggested to test and if necesary extend the code without forgetting mentioning the author
 
 ## Tech Stack:
 python3, pytorch, uvicorn, fastApi, mysql, YOLOv6, docker
+
+JuanPabloVillaSerna@jpvilla1990@gmail.com
