@@ -4,6 +4,7 @@ Back End to classify persons in workplace by being working or not using YOLOv6 c
 The Backend classify persons and two actions, working and nonworking. Using YOLO the persons are classified, and then by comparing several frames and the position of the squarebox, the backend will classify a person as nonworking if remains in the same position for long time.
 
 In the folder data/imagesDatabase all the original images and its classification will be stored, the back end uses a mysql database
+In the folder data/videoPersonsIdle all the videos with the persons nonworking will be stored
 The database contains 3 tables:
 - frames: each captured frame with its timestamp and a flag to indicate if already the persons have been detected and the action has been detected.
 - objects: each person detected in each frame with its coordinates and foreign key with table frames, in here the persons are classified per frame but not compared with different frames
@@ -35,11 +36,13 @@ Relay in the file data/logs/log.txt, this will give hints about errors during th
 
 After the backend is running the container will be assigned to the port 8080 (can be modified from the docker-compose.yml file), use the following paths to interact with the backend:
 
-localhost:8080/cameraCapture/start : start capture from cameras IP
-localhost:8080/cameraCapture/stop : stop capture
-localhost:8080/predictor/start : start predictions to captured frames
-localhost:8080/predictor/stop : stop predictions
-localhost:8080/reset : reset database and captured images, recommended to run this every day to avoid excess storage.
+- localhost:8080/cameraCapture/start : start capture from cameras IP
+- localhost:8080/cameraCapture/stop : stop capture
+- localhost:8080/predictor/start : start predictions to captured frames
+- localhost:8080/predictor/stop : stop predictions
+- localhost:8080/reset : reset database and captured images, recommended to run this every day to avoid excess storage.
+
+The backend will fill the database with all the needed information to enable the creation of any kind of efficiency reports, as well the videos of persons non working will be stored in the folder mentioned beforehand.
 
 ## Tech Stack:
-python3, pytorch, uvicorn, fastApi, mysql, YOLOv6
+python3, pytorch, uvicorn, fastApi, mysql, YOLOv6, docker
