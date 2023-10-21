@@ -1,0 +1,22 @@
+version: '3'
+services:
+  backend:
+    container_name: workplace_monitor_backend
+    image: workplace_monitor_back_end:0.4.0
+    ports:
+      - "8080:80"
+    volumes:
+      - ./workplaceMonitorData:/app/data
+      - ./config.yaml:/app/config.yaml
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]
+
+  mysql:
+    container_name: project-mysql
+    image: mysql:8.1.0
+    environment:
+      MYSQL_ROOT_PASSWORD: admin
+    ports:
+      - "3306:3306"
+      - "33060:33060"
+    volumes:
+      - ./mysql:/var/lib/mysql

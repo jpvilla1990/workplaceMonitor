@@ -9,3 +9,5 @@ mysql>=0.0.3
 mysql-connector-python>=8.1.0
 pytorch>=2.0.1
 torchvision>=0.15.2
+fastap>=0.97.0
+uvicorn>=0.22.0
