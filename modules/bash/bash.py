@@ -47,7 +47,7 @@ class Bash(BaseModule):
             self.stopBashScript(process)
         command : str = executable + " " + self.__scripts[process] + " &"
 
-        self.__processes[process] = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.__processes[process] = subprocess.Popen(command, shell=True)
 
     def stopBashScript(self, processName : str):
         """

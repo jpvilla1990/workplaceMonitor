@@ -25,6 +25,3 @@ RUN pip install \
     fastapi==0.97.0 \
     uvicorn==0.22.0 \
     psutil==5.9.5
-
-#ENTRYPOINT ["uvicorn"]
-#CMD ["main:app", "--host", "0.0.0.0", "--port", "80"]
