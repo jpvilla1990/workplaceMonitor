@@ -1,6 +1,6 @@
 # workplaceMonitor
 
-Back End to classify persons in workplace by being working or not using YOLOv6 capturing videos from Ip cameras.
+Back End to classify persons in workplace by being working or not using YOLOv6 capturing videos from Ip cameras assuming the work place activities are related mainly to physical actions.
 The Backend classify persons and two actions, working and nonworking. Using YOLO the persons are classified, and then by comparing several frames and the position of the squarebox, the backend will classify a person as nonworking if remains in the same position for long time.
 
 In the folder data/imagesDatabase all the original images and its classification will be stored, the back end uses a mysql database
