@@ -2,7 +2,7 @@ version: '3'
 services:
   backend:
     container_name: workplace_monitor_backend
-    image: workplace_monitor_back_end:0.4.0
+    image: workplace_monitor_back_end:1.0.0
     ports:
       - "8080:80"
     volumes:
