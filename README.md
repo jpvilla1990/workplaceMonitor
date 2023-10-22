@@ -38,7 +38,7 @@ After the backend is running the container will be assigned to the port 8080 (ca
 
 - localhost:8080/cameraCapture/start : start capture from cameras IP
 - localhost:8080/cameraCapture/stop : stop capture
-- localhost:8080/predictor/start : start predictions from captured frames (YOLOv6 running as a process in docker sometimes creates deadlocks, if the predictor stops generating images trigger this command frequently, around every 5 minutes)
+- localhost:8080/predictor/start : start predictions from captured frames
 - localhost:8080/predictor/stop : stop predictions
 - localhost:8080/reset : reset database and captured images, recommended to run this every day to avoid excess storage.
 
@@ -49,6 +49,7 @@ The backend will fill the database with all the needed information to enable the
 - The predictor relies on the pretrain model from YOLOv6, therefore may behave differently between one to other environment and surroundings, therefore is better to play with the config file (tolerance) to find the best trade off
 - The algorithm does not detect 100% all persons so this backend should not be a primary source or efficiency report, rather it should be an assitant tool where each generated video is reviewed to describe tendencies in the workplace
 - The back end was tested in a development environment, hence for in production set up is suggested to test and if necesary extend the code without forgetting mentioning the author
+- The deployment is done with docker-compose, therefore the solution could be compatible with a deployment in cloud
 
 ## Tech Stack:
 python3, pytorch, uvicorn, fastApi, mysql, YOLOv6, docker
