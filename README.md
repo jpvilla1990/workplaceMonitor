@@ -59,4 +59,3 @@ JuanPabloVillaSerna@jpvilla1990@gmail.com
 ## Examples:
 Videos of persons classified as non working in folder examples/
 
-![examplePrediction](https://github.com/jpvilla1990/workplaceMonitor/assets/43726724/04f59048-e5cc-468d-b5aa-47451b064107)
