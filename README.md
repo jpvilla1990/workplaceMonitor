@@ -56,11 +56,4 @@ python3, pytorch, uvicorn, fastApi, mysql, YOLOv6, docker
 JuanPabloVillaSerna@jpvilla1990@gmail.com
 
 ## Examples:
-Videos of persons classified as non working:
-
-https://github.com/jpvilla1990/workplaceMonitor/assets/43726724/67c49b96-413e-4d88-9541-978c4b8161ea
-https://github.com/jpvilla1990/workplaceMonitor/assets/43726724/8ed81e07-8548-40c1-adf5-94656f650f18
-https://github.com/jpvilla1990/workplaceMonitor/assets/43726724/55a6debf-0318-41f0-9012-201ea5028fe0
-https://github.com/jpvilla1990/workplaceMonitor/assets/43726724/8b5f8ffb-0346-4f69-957c-451a7047175c
-https://github.com/jpvilla1990/workplaceMonitor/assets/43726724/0d85f699-a0f5-427c-9e32-2a8a11e910ea
-
+Videos of persons classified as non working in folder examples/
